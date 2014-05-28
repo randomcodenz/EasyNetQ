@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using EasyNetQ.Producer;
 using EasyNetQ.Topology;
 
 namespace EasyNetQ.ScheduledPublish
@@ -9,12 +10,14 @@ namespace EasyNetQ.ScheduledPublish
         private readonly IConventions conventions;
         private readonly IConnectionConfiguration connectionConfiguration;
         private readonly IAdvancedBus advancedBus;
+        private readonly IPublishExchangeDeclareStrategy publishExchangeDeclareStrategy;
 
-        public DeadLetterExchangeScheduler( IConventions conventions, IConnectionConfiguration connectionConfiguration, IAdvancedBus advancedBus )
+        public DeadLetterExchangeScheduler( IConventions conventions, IConnectionConfiguration connectionConfiguration, IAdvancedBus advancedBus, IPublishExchangeDeclareStrategy publishExchangeDeclareStrategy )
         {
             this.conventions = conventions;
             this.connectionConfiguration = connectionConfiguration;
             this.advancedBus = advancedBus;
+            this.publishExchangeDeclareStrategy = publishExchangeDeclareStrategy;
         }
 
         public void Schedule<T>( T message, TimeSpan messageDelay ) where T : class
@@ -23,7 +26,8 @@ namespace EasyNetQ.ScheduledPublish
 
             var delay = Round(messageDelay);
             var delayString = delay.ToString(@"hh\_mm\_ss");
-            var exchangeName = conventions.ExchangeNamingConvention(typeof(T));
+            var targetExchange = publishExchangeDeclareStrategy.DeclareExchange( advancedBus, typeof( T ), ExchangeType.Topic );
+            var exchangeName = targetExchange.Name;
             var futureExchangeName = exchangeName + "_" + delayString;
             var futureQueueName = conventions.QueueNamingConvention(typeof(T), delayString);
             var futureExchange = advancedBus.ExchangeDeclare(futureExchangeName, ExchangeType.Topic);
@@ -46,7 +50,8 @@ namespace EasyNetQ.ScheduledPublish
 
             var delay = Round(messageDelay);
             var delayString = delay.ToString(@"hh\_mm\_ss");
-            var exchangeName = conventions.ExchangeNamingConvention(typeof(T));
+            var targetExchange = publishExchangeDeclareStrategy.DeclareExchange(advancedBus, typeof(T), ExchangeType.Topic);
+            var exchangeName = targetExchange.Name;
             var futureExchangeName = exchangeName + "_" + delayString;
             var futureQueueName = conventions.QueueNamingConvention(typeof(T), delayString);
             var futureExchange = advancedBus.ExchangeDeclare(futureExchangeName, ExchangeType.Topic);

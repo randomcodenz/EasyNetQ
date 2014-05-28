@@ -15,8 +15,6 @@ namespace EasyNetQ
         /// <param name="message">The message to response with</param>
         public static void FuturePublish<T>(this IBus bus, TimeSpan messageDelay, T message) where T : class
         {
-            Preconditions.CheckNotNull(message, "message");
-
             var scheduler = bus.Advanced.Container.Resolve<IDeadLetterExchangeScheduler>();
             scheduler.Schedule( message, messageDelay );
         }
@@ -30,8 +28,6 @@ namespace EasyNetQ
         /// <param name="message">The message to response with</param>
         public static Task FuturePublishAsync<T>(this IBus bus, TimeSpan messageDelay, T message) where T : class
         {
-            Preconditions.CheckNotNull(message, "message");
-
             var scheduler = bus.Advanced.Container.Resolve<IDeadLetterExchangeScheduler>();
             return scheduler.ScheduleAsync( message, messageDelay );
         }
