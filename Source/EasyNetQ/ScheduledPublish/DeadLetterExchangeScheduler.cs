@@ -24,22 +24,8 @@ namespace EasyNetQ.ScheduledPublish
         {
             Preconditions.CheckNotNull(message, "message");
 
-            var delay = Round(messageDelay);
-            var delayString = delay.ToString(@"hh\_mm\_ss");
-            var targetExchange = publishExchangeDeclareStrategy.DeclareExchange( advancedBus, typeof( T ), ExchangeType.Topic );
-            var exchangeName = targetExchange.Name;
-            var futureExchangeName = exchangeName + "_" + delayString;
-            var futureQueueName = conventions.QueueNamingConvention(typeof(T), delayString);
-            var futureExchange = advancedBus.ExchangeDeclare(futureExchangeName, ExchangeType.Topic);
-            var futureQueue = advancedBus.QueueDeclare(futureQueueName, perQueueTtl: (int)delay.TotalMilliseconds, deadLetterExchange: exchangeName);
-            advancedBus.Bind(futureExchange, futureQueue, "#");
-            var easyNetQMessage = new Message<T>(message)
-                {
-                    Properties =
-                        {
-                            DeliveryMode = (byte)(connectionConfiguration.PersistentMessages ? 2 : 1)
-                        }
-                };
+            var futureExchange = PrepareSchedulingExchangeAndQueue( messageDelay, typeof( T ) );
+            var easyNetQMessage = CreateMessage( message );
 
             advancedBus.Publish(futureExchange, "#", false, false, easyNetQMessage);
         }
@@ -48,24 +34,36 @@ namespace EasyNetQ.ScheduledPublish
         {
             Preconditions.CheckNotNull(message, "message");
 
-            var delay = Round(messageDelay);
-            var delayString = delay.ToString(@"hh\_mm\_ss");
-            var targetExchange = publishExchangeDeclareStrategy.DeclareExchange(advancedBus, typeof(T), ExchangeType.Topic);
+            var futureExchange = PrepareSchedulingExchangeAndQueue(messageDelay, typeof(T));
+            var easyNetQMessage = CreateMessage(message);
+
+            return advancedBus.PublishAsync(futureExchange, "#", false, false, easyNetQMessage);
+        }
+
+        private IExchange PrepareSchedulingExchangeAndQueue( TimeSpan messageDelay, Type messageType )
+        {
+            var delay = Round( messageDelay );
+            var delayString = delay.ToString( @"hh\_mm\_ss" );
+            var targetExchange = publishExchangeDeclareStrategy.DeclareExchange( advancedBus, messageType, ExchangeType.Topic );
             var exchangeName = targetExchange.Name;
             var futureExchangeName = exchangeName + "_" + delayString;
-            var futureQueueName = conventions.QueueNamingConvention(typeof(T), delayString);
-            var futureExchange = advancedBus.ExchangeDeclare(futureExchangeName, ExchangeType.Topic);
-            var futureQueue = advancedBus.QueueDeclare(futureQueueName, perQueueTtl: (int)delay.TotalMilliseconds, deadLetterExchange: exchangeName);
-            advancedBus.Bind(futureExchange, futureQueue, "#");
-            var easyNetQMessage = new Message<T>(message)
+            var futureQueueName = conventions.QueueNamingConvention( messageType, delayString );
+            var futureExchange = advancedBus.ExchangeDeclare( futureExchangeName, ExchangeType.Topic );
+            var futureQueue = advancedBus.QueueDeclare( futureQueueName, perQueueTtl: (int) delay.TotalMilliseconds,
+                                                        deadLetterExchange: exchangeName );
+            advancedBus.Bind( futureExchange, futureQueue, "#" );
+            return futureExchange;
+        }
+
+        private IMessage<T> CreateMessage<T>( T message ) where T : class
+        {
+            return new Message<T>( message )
                 {
                     Properties =
                         {
-                            DeliveryMode = (byte)(connectionConfiguration.PersistentMessages ? 2 : 1)
+                            DeliveryMode = (byte) ( connectionConfiguration.PersistentMessages ? 2 : 1 )
                         }
                 };
-
-            return advancedBus.PublishAsync(futureExchange, "#", false, false, easyNetQMessage);
         }
 
         private static TimeSpan Round(TimeSpan timeSpan)
