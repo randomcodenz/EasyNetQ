@@ -2,6 +2,7 @@
 using EasyNetQ.Consumer;
 using EasyNetQ.Loggers;
 using EasyNetQ.Producer;
+using EasyNetQ.ScheduledPublish;
 
 namespace EasyNetQ
 {
@@ -30,6 +31,7 @@ namespace EasyNetQ
                 .Register<IConsumerDispatcherFactory, ConsumerDispatcherFactory>()
                 .Register<IPublishExchangeDeclareStrategy, PublishExchangeDeclareStrategy>()
                 .Register(sp => PublisherFactory.CreatePublisher(sp.Resolve<IConnectionConfiguration>(), sp.Resolve<IEasyNetQLogger>(), sp.Resolve<IEventBus>()))
+                .Register<IDeadLetterExchangeScheduler,DeadLetterExchangeScheduler>()
                 .Register<IConsumerErrorStrategy, DefaultConsumerErrorStrategy>()
                 .Register<IHandlerRunner, HandlerRunner>()
                 .Register<IInternalConsumerFactory, InternalConsumerFactory>()

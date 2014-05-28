@@ -28,7 +28,7 @@ namespace EasyNetQ.Tests.Integration
         }
 
         [Test]
-        [Explicit("Needs an instance of RabbitMQ on localhost to work AND scheduler service running")]
+        [Explicit("Needs an instance of RabbitMQ on localhost to work")]
         public void Should_be_able_to_schedule_a_message_2()
         {
             var autoResetEvent = new AutoResetEvent(false);
@@ -51,7 +51,7 @@ namespace EasyNetQ.Tests.Integration
         }
 
         [Test]
-        [Explicit("Needs an instance of RabbitMQ on localhost to work AND scheduler service running")]
+        [Explicit("Needs an instance of RabbitMQ on localhost to work")]
         public void High_volume_scheduling_test_2()
         {
             logger.Debug = false;

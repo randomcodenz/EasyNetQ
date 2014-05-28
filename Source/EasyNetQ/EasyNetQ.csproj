@@ -159,6 +159,8 @@
     <Compile Include="RabbitHutch.cs" />
     <Compile Include="RabbitBusExtensions.cs" />
     <Compile Include="RandomClusterHostSelectionStrategy.cs" />
+    <Compile Include="ScheduledPublish\DeadLetterExchangeScheduler.cs" />
+    <Compile Include="ScheduledPublish\IDeadLetterExchangeScheduler.cs" />
     <Compile Include="Sprache\Failure.cs" />
     <Compile Include="Sprache\IFailure.cs" />
     <Compile Include="Sprache\Input.cs" />

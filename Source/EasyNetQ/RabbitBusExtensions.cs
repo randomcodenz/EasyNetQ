@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using EasyNetQ.Topology;
+using EasyNetQ.ScheduledPublish;
 
 namespace EasyNetQ
 {
@@ -17,33 +17,9 @@ namespace EasyNetQ
         {
             Preconditions.CheckNotNull(message, "message");
 
-            var advancedBus = bus.Advanced;
-            var conventions = advancedBus.Container.Resolve<IConventions>();
-            var connectionConfiguration = advancedBus.Container.Resolve<IConnectionConfiguration>();
-            var delay = Round(messageDelay);
-            var delayString = delay.ToString(@"hh\_mm\_ss");
-            var exchangeName = conventions.ExchangeNamingConvention(typeof(T));
-            var futureExchangeName = exchangeName + "_" + delayString;
-            var futureQueueName = conventions.QueueNamingConvention(typeof(T), delayString);
-            var futureExchange = advancedBus.ExchangeDeclare(futureExchangeName, ExchangeType.Topic);
-            var futureQueue = advancedBus.QueueDeclare(futureQueueName, perQueueTtl: (int)delay.TotalMilliseconds, deadLetterExchange: exchangeName);
-            advancedBus.Bind(futureExchange, futureQueue, "#");
-            var easyNetQMessage = new Message<T>(message)
-                {
-                    Properties =
-                        {
-                            DeliveryMode = (byte)(connectionConfiguration.PersistentMessages ? 2 : 1)
-                        }
-                };
-
-            bus.Advanced.Publish(futureExchange, "#", false, false, easyNetQMessage);
+            var scheduler = bus.Advanced.Container.Resolve<IDeadLetterExchangeScheduler>();
+            scheduler.Schedule( message, messageDelay );
         }
-
-        private static TimeSpan Round(TimeSpan timeSpan)
-        {
-            return new TimeSpan(timeSpan.Days, timeSpan.Hours, timeSpan.Minutes, timeSpan.Seconds, 0);
-        }
-
 
         /// <summary>
         /// Schedule a message to be published at some time in the future.
@@ -56,26 +32,8 @@ namespace EasyNetQ
         {
             Preconditions.CheckNotNull(message, "message");
 
-            var advancedBus = bus.Advanced;
-            var conventions = advancedBus.Container.Resolve<IConventions>();
-            var connectionConfiguration = advancedBus.Container.Resolve<IConnectionConfiguration>();
-            var delay = Round(messageDelay);
-            var delayString = delay.ToString(@"hh\_mm\_ss");
-            var exchangeName = conventions.ExchangeNamingConvention(typeof(T));
-            var futureExchangeName = exchangeName + "_" + delayString;
-            var futureQueueName = conventions.QueueNamingConvention(typeof(T), delayString);
-            var futureExchange = advancedBus.ExchangeDeclare(futureExchangeName, ExchangeType.Topic);
-            var futureQueue = advancedBus.QueueDeclare(futureQueueName, perQueueTtl: (int)delay.TotalMilliseconds, deadLetterExchange: exchangeName);
-            advancedBus.Bind(futureExchange, futureQueue, "#");
-            var easyNetQMessage = new Message<T>(message)
-            {
-                Properties =
-                {
-                    DeliveryMode = (byte)(connectionConfiguration.PersistentMessages ? 2 : 1)
-                }
-            };
-
-            return bus.Advanced.PublishAsync(futureExchange, "#", false, false, easyNetQMessage);
+            var scheduler = bus.Advanced.Container.Resolve<IDeadLetterExchangeScheduler>();
+            return scheduler.ScheduleAsync( message, messageDelay );
         }
 
     }
