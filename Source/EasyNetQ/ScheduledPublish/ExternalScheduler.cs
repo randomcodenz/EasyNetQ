@@ -24,26 +24,16 @@ namespace EasyNetQ.ScheduledPublish
 
         public void Schedule<T>( T message, DateTime futurePublishDate, string cancellationKey ) where T : class
         {
-            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull( message, "message" );
 
-            var typeName = typeNameSerializer.Serialize(typeof(T));
-            var messageBody = serializer.MessageToBytes(message);
-
-            bus.Publish(new ScheduleMe
-                {
-                    WakeTime = futurePublishDate,
-                    BindingKey = typeName,
-                    CancellationKey = cancellationKey,
-                    InnerMessage = messageBody
-                });
+            var scheduleMe = CreateScheduleMessage( message, futurePublishDate, cancellationKey );
+            bus.Publish(scheduleMe);
         }
 
         public void Unschedule( string cancellationKey)
         {
-            bus.Publish(new UnscheduleMe
-                {
-                    CancellationKey = cancellationKey
-                });
+            var unscheduleMe = CreateUnscheduleMessage( cancellationKey );
+            bus.Publish(unscheduleMe);
         }
 
         public Task ScheduleAsync<T>( T message, DateTime futurePublishDate ) where T : class
@@ -53,26 +43,39 @@ namespace EasyNetQ.ScheduledPublish
 
         public Task ScheduleAsync<T>( T message, DateTime futurePublishDate, string cancellationKey ) where T : class
         {
-            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull( message, "message" );
 
-            var typeName = typeNameSerializer.Serialize(typeof(T));
-            var messageBody = serializer.MessageToBytes(message);
+            var scheduleMe = CreateScheduleMessage( message, futurePublishDate, cancellationKey );
+            return bus.PublishAsync( scheduleMe );
+        }
 
-            return bus.PublishAsync(new ScheduleMe
+        public Task UnscheduleAsync( string cancellationKey )
+        {
+            var unscheduleMe = CreateUnscheduleMessage(cancellationKey);
+            return bus.PublishAsync(unscheduleMe);
+        }
+
+        private ScheduleMe CreateScheduleMessage<T>( T message, DateTime futurePublishDate, string cancellationKey ) where T : class
+        {
+            var typeName = typeNameSerializer.Serialize( typeof( T ) );
+            var messageBody = serializer.MessageToBytes( message );
+            var scheduleMe = new ScheduleMe
                 {
                     WakeTime = futurePublishDate,
                     BindingKey = typeName,
                     CancellationKey = cancellationKey,
                     InnerMessage = messageBody
-                });
+                };
+            return scheduleMe;
         }
 
-        public Task UnscheduleAsync( string cancellationKey )
+        private static UnscheduleMe CreateUnscheduleMessage( string cancellationKey )
         {
-            return bus.PublishAsync(new UnscheduleMe
+            var unscheduleMe = new UnscheduleMe
                 {
                     CancellationKey = cancellationKey
-                });
+                };
+            return unscheduleMe;
         }
     }
 }

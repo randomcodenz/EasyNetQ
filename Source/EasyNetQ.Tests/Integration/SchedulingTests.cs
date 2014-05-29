@@ -3,6 +3,7 @@
 using System;
 using System.Threading;
 using EasyNetQ.Loggers;
+using EasyNetQ.SystemMessages;
 using NUnit.Framework;
 
 namespace EasyNetQ.Tests.Integration
@@ -71,6 +72,76 @@ namespace EasyNetQ.Tests.Integration
                 bus.FuturePublish(TimeSpan.FromSeconds(3), invitation);
                 Thread.Sleep(1);
             }
+        }
+
+        [Test]
+        [Explicit("Needs an instance of RabbitMQ on localhost to work")]
+        public void Should_be_able_to_publish_a_schedule_me_message()
+        {
+            var autoResetEvent = new AutoResetEvent(false);
+
+            bus.Subscribe<ScheduleMe>("schedulingTest1", message => autoResetEvent.Set() );
+
+            var invitation = new PartyInvitation
+            {
+                Text = "Please come to my party",
+                Date = new DateTime(2011, 5, 24)
+            };
+
+            bus.FuturePublish(DateTime.UtcNow.AddSeconds(3), invitation);
+
+            if (!autoResetEvent.WaitOne(100000))
+                Assert.Fail();
+        }
+
+        [Test]
+        [Explicit("Needs an instance of RabbitMQ on localhost to work")]
+        public void Should_be_able_to_async_publish_a_schedule_me_message()
+        {
+            var autoResetEvent = new AutoResetEvent(false);
+
+            bus.Subscribe<ScheduleMe>("schedulingTest1", message => autoResetEvent.Set() );
+
+            var invitation = new PartyInvitation
+            {
+                Text = "Please come to my party",
+                Date = new DateTime(2011, 5, 24)
+            };
+
+            var result = bus.FuturePublishAsync( DateTime.UtcNow.AddSeconds( 3 ), invitation );
+            result.Wait( 10000 );
+
+            if (!autoResetEvent.WaitOne(100000))
+                Assert.Fail();
+        }
+
+        [Test]
+        [Explicit("Needs an instance of RabbitMQ on localhost to work")]
+        public void Should_be_able_to_publish_an_unschedule_me_message()
+        {
+            var autoResetEvent = new AutoResetEvent(false);
+
+            bus.Subscribe<UnscheduleMe>("schedulingTest1", message => autoResetEvent.Set() );
+
+            bus.CancelFuturePublish( "Bob" );
+
+            if (!autoResetEvent.WaitOne(100000))
+                Assert.Fail();
+        }
+
+        [Test]
+        [Explicit("Needs an instance of RabbitMQ on localhost to work")]
+        public void Should_be_able_to_async_publish_an_unschedule_me_message()
+        {
+            var autoResetEvent = new AutoResetEvent(false);
+
+            bus.Subscribe<UnscheduleMe>("schedulingTest1", message => autoResetEvent.Set() );
+
+            var result = bus.CancelFuturePublishAsync( "Bob" );
+            result.Wait( 10000 );
+
+            if (!autoResetEvent.WaitOne(100000))
+                Assert.Fail();
         }
 
 

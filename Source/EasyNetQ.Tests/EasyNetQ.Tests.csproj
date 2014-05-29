@@ -169,7 +169,9 @@
     <Compile Include="MessagePropertiesTests.cs" />
     <Compile Include="Integration\SubscribeToErrorQueueSpike.cs" />
     <Compile Include="RabbitHutchTests.cs" />
+    <Compile Include="ScheduledPublishTests\BusExtensionsTests.cs" />
     <Compile Include="ScheduledPublishTests\DeadLetterExchangeSchedulerTests.cs" />
+    <Compile Include="ScheduledPublishTests\ExternalSchedulerTests.cs" />
     <Compile Include="ScheduledPublishTests\RabbitBusExtensionsTests.cs" />
     <Compile Include="SubscribeTests.cs" />
     <Compile Include="TaskExtensions.cs" />
