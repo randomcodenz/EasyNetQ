@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using EasyNetQ.SystemMessages;
+using EasyNetQ.ScheduledPublish;
 
 namespace EasyNetQ
 {
@@ -16,7 +16,8 @@ namespace EasyNetQ
         /// <param name="message">The message to response with</param>
         public static void FuturePublish<T>(this IBus bus, DateTime futurePublishDate, T message) where T : class
         {
-            FuturePublish(bus, futurePublishDate, null, message);
+            var scheduler = bus.ResolveScheduler();
+            scheduler.Schedule( message, futurePublishDate );
         }
 
         /// <summary>
@@ -30,23 +31,8 @@ namespace EasyNetQ
         /// <param name="message">The message to response with</param>
         public static void FuturePublish<T>(this IBus bus, DateTime futurePublishDate, string cancellationKey, T message) where T : class
         {
-            Preconditions.CheckNotNull(message, "message");
-
-            var advancedBus = bus.Advanced;
-
-            var typeNameSerializer = advancedBus.Container.Resolve<ITypeNameSerializer>();
-            var serializer = advancedBus.Container.Resolve<ISerializer>();
-
-            var typeName = typeNameSerializer.Serialize(typeof(T));
-            var messageBody = serializer.MessageToBytes(message);
-
-            bus.Publish(new ScheduleMe
-                {
-                    WakeTime = futurePublishDate,
-                    BindingKey = typeName,
-                    CancellationKey = cancellationKey,
-                    InnerMessage = messageBody
-                });
+            var scheduler = bus.ResolveScheduler();
+            scheduler.Schedule( message, futurePublishDate, cancellationKey );
         }
 
         /// <summary>
@@ -56,10 +42,8 @@ namespace EasyNetQ
         /// <param name="cancellationKey">The identifier that was used when originally scheduling the message with FuturePublish</param>
         public static void CancelFuturePublish(this IBus bus, string cancellationKey)
         {
-            bus.Publish(new UnscheduleMe
-                {
-                    CancellationKey = cancellationKey
-                });
+            var scheduler = bus.ResolveScheduler();
+            scheduler.Unschedule( cancellationKey );
         }
 
         /// <summary>
@@ -72,7 +56,8 @@ namespace EasyNetQ
         /// <param name="message">The message to response with</param>
         public static Task FuturePublishAsync<T>(this IBus bus, DateTime futurePublishDate, T message) where T : class
         {
-            return FuturePublishAsync(bus, futurePublishDate, null, message);
+            var scheduler = bus.ResolveScheduler();
+            return scheduler.ScheduleAsync( message, futurePublishDate );
         }
 
         /// <summary>
@@ -86,23 +71,8 @@ namespace EasyNetQ
         /// <param name="message">The message to response with</param>
         public static Task FuturePublishAsync<T>(this IBus bus, DateTime futurePublishDate, string cancellationKey, T message) where T : class
         {
-            Preconditions.CheckNotNull(message, "message");
-
-            var advancedBus = bus.Advanced;
-
-            var typeNameSerializer = advancedBus.Container.Resolve<ITypeNameSerializer>();
-            var serializer = advancedBus.Container.Resolve<ISerializer>();
-
-            var typeName = typeNameSerializer.Serialize(typeof(T));
-            var messageBody = serializer.MessageToBytes(message);
-
-            return bus.PublishAsync(new ScheduleMe
-                {
-                    WakeTime = futurePublishDate,
-                    BindingKey = typeName,
-                    CancellationKey = cancellationKey,
-                    InnerMessage = messageBody
-                });
+            var scheduler = bus.ResolveScheduler();
+            return scheduler.ScheduleAsync( message, futurePublishDate, cancellationKey );
         }
 
         /// <summary>
@@ -112,10 +82,13 @@ namespace EasyNetQ
         /// <param name="cancellationKey">The identifier that was used when originally scheduling the message with FuturePublish</param>
         public static Task CancelFuturePublishAsync(this IBus bus, string cancellationKey)
         {
-            return bus.PublishAsync(new UnscheduleMe
-                {
-                    CancellationKey = cancellationKey
-                });
+            var scheduler = bus.ResolveScheduler();
+            return scheduler.UnscheduleAsync( cancellationKey );
+        }
+
+        private static IExternalScheduler ResolveScheduler( this IBus bus )
+        {
+            return bus.Advanced.Container.Resolve<IExternalScheduler>();
         }
     }
 }

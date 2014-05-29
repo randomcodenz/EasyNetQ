@@ -32,6 +32,7 @@ namespace EasyNetQ
                 .Register<IPublishExchangeDeclareStrategy, PublishExchangeDeclareStrategy>()
                 .Register(sp => PublisherFactory.CreatePublisher(sp.Resolve<IConnectionConfiguration>(), sp.Resolve<IEasyNetQLogger>(), sp.Resolve<IEventBus>()))
                 .Register<IDeadLetterExchangeScheduler,DeadLetterExchangeScheduler>()
+                .Register<IExternalScheduler,ExternalScheduler>()
                 .Register<IConsumerErrorStrategy, DefaultConsumerErrorStrategy>()
                 .Register<IHandlerRunner, HandlerRunner>()
                 .Register<IInternalConsumerFactory, InternalConsumerFactory>()
